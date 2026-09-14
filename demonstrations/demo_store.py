@@ -238,11 +238,15 @@ class DemoStore:
         # fails on a missing key -- or, worse, silently reads a different observation than the
         # one it configured. Lightweight demos are the recorded source and carry no observations
         # at all, so their directory is left alone.
-        if (
-            metadata.observation_mode != ObservationMode.Lightweight
-            and metadata.environment_data.observation_config.privileged_information
-        ):
-            path /= "privileged"
+        if metadata.observation_mode != ObservationMode.Lightweight:
+            cfg = metadata.environment_data.observation_config
+            if cfg.privileged_information:
+                path /= "privileged"
+            # The proprioception mode decides which keys a replay stores, exactly as the camera
+            # set does, so it has to be part of the path. Without this a replay cached under one
+            # mode is handed to a caller that configured the other, and the caller fails on a
+            # missing key -- or silently reads a different observation than it asked for.
+            path /= getattr(cfg, "proprioception_mode", "raw")
         if frequency:
             path /= f"{frequency}hz"
         return path / metadata.filename

@@ -20,7 +20,10 @@ from bigym.robots.robot import Robot
 from bigym.bigym_renderer import BiGymRenderer
 from bigym.utils.callables_cache import CallablesCache
 from bigym.utils.env_health import EnvHealth
-from bigym.utils.observation_config import ObservationConfig
+from bigym.utils.observation_config import (
+    ObservationConfig,
+    PROPRIOCEPTION_COMPACT,
+)
 
 CONTROL_FREQUENCY_MAX = 500
 CONTROL_FREQUENCY_MIN = 20
@@ -264,6 +267,18 @@ class BiGymEnv(gym.Env):
         """Get observation space."""
         obs_dict = {}
         if self._observation_config.proprioception:
+            if self._observation_config.proprioception_mode == PROPRIOCEPTION_COMPACT:
+                # Joint positions alone; the cameras and the privileged keys are added by the
+                # blocks further down exactly as they are in "raw" mode.
+                obs_dict = {
+                    "proprioception": spaces.Box(
+                        low=-np.inf,
+                        high=np.inf,
+                        shape=(len(self._robot.qpos),),
+                        dtype=np.float32,
+                    )
+                }
+                return self._finish_observation_space(obs_dict)
             obs_dict = {
                 "proprioception": spaces.Box(
                     low=-np.inf,
@@ -297,6 +312,10 @@ class BiGymEnv(gym.Env):
                         ),
                     }
                 )
+        return self._finish_observation_space(obs_dict)
+
+    def _finish_observation_space(self, obs_dict) -> spaces.Space:
+        """Add the camera and privileged entries, shared by both proprioception modes."""
         if self._use_pixels:
             for camera in self.observation_config.cameras:
                 if camera.rgb:
@@ -371,6 +390,9 @@ class BiGymEnv(gym.Env):
         return info
 
     def _get_proprioception_obs(self) -> dict[str, Any]:
+        if self._observation_config.proprioception_mode == PROPRIOCEPTION_COMPACT:
+            # See ObservationConfig: the other keys and qvel duplicate these numbers.
+            return {"proprioception": np.asarray(self._robot.qpos, np.float32)}
         obs = {
             "proprioception": np.concatenate(
                 [self._robot.qpos, self._robot.qvel]
