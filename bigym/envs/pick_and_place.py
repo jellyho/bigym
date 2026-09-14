@@ -1,7 +1,6 @@
 """Pick and place tasks."""
 
 import numpy as np
-from gymnasium import spaces
 from pyquaternion import Quaternion
 
 from bigym.bigym_env import BiGymEnv
@@ -17,6 +16,8 @@ from bigym.utils.env_utils import get_random_points_on_plane
 
 class PutCups(BiGymEnv):
     """Put cups in the wall cabinet."""
+
+    _PRIVILEGED_PROPS = ("cabinet_base", "cabinet_wall", "cups",)
 
     _PRESET_PATH = PRESETS_PATH / "counter_base_wall_1x1.yaml"
 
@@ -34,22 +35,7 @@ class PutCups(BiGymEnv):
         self.cabinet_wall = self._preset.get_props(WallCabinet)[0]
         self.cups = [Mug(self._mojo) for _ in range(self._CUPS_COUNT)]
 
-    def _get_task_privileged_obs(self):
-        """Every cup's world pose. `_success` is a collision predicate against a shelf or a
-        counter, so the pose is the state that decides it; the predicate itself is not exposed.
-        """
-        return {
-            f"cup_{i}_pose": np.asarray(c.get_pose(), np.float32).flatten()
-            for i, c in enumerate(self.cups)
-        }
 
-    def _get_task_privileged_obs_space(self):
-        return {
-            f"cup_{i}_pose": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
-            )
-            for i in range(self._CUPS_COUNT)
-        }
 
     def _success(self) -> bool:
         for cup in self.cups:
@@ -93,6 +79,8 @@ class TakeCups(PutCups):
 
 class StoreBox(BiGymEnv):
     """Put box in the cupboard task."""
+
+    _PRIVILEGED_PROPS = ("cabinet_base", "box",)
 
     _PRESET_PATH = PRESETS_PATH / "cabinet_door.yaml"
 
@@ -145,6 +133,8 @@ class PickBox(StoreBox):
 class SaucepanToHob(BiGymEnv):
     """Take saucepan from cabinet and place it to hob."""
 
+    _PRIVILEGED_PROPS = ("cabinet_base", "saucepan",)
+
     _PRESET_PATH = PRESETS_PATH / "cabinet_hob.yaml"
 
     _SAUCEPAN_POS = np.array([0.85, 0.1, 0.5])
@@ -156,16 +146,7 @@ class SaucepanToHob(BiGymEnv):
         self.cabinet_base = self._preset.get_props(BaseCabinet)[0]
         self.saucepan = Saucepan(self._mojo)
 
-    def _get_task_privileged_obs(self):
-        """The saucepan's world pose -- `_success` tests it against the hob."""
-        return {"saucepan_pose": np.asarray(self.saucepan.get_pose(), np.float32).flatten()}
 
-    def _get_task_privileged_obs_space(self):
-        return {
-            "saucepan_pose": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
-            )
-        }
 
     def _success(self) -> bool:
         if not self.saucepan.is_colliding(self.cabinet_base.hob):
@@ -186,6 +167,8 @@ class SaucepanToHob(BiGymEnv):
 
 class StoreKitchenware(BiGymEnv):
     """Put all kitchenware to cupboard."""
+
+    _PRIVILEGED_PROPS = ("cabinet_base", "items",)
 
     _PRESET_PATH = PRESETS_PATH / "cabinet_hob.yaml"
 
@@ -221,6 +204,8 @@ class StoreKitchenware(BiGymEnv):
 
 class ToastSandwich(BiGymEnv):
     """Move sandwich on the frying pan."""
+
+    _PRIVILEGED_PROPS = ("cabinet_base", "pan", "spatula", "board", "sandwich",)
 
     DEFAULT_ROBOT = H1FineManipulation
 

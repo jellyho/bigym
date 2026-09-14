@@ -2,7 +2,6 @@
 from abc import ABC
 
 import numpy as np
-from gymnasium import spaces
 
 from bigym.bigym_env import BiGymEnv
 from bigym.const import PRESETS_PATH
@@ -14,6 +13,8 @@ TOLERANCE = 0.1
 
 class _CupboardsInteractionEnv(BiGymEnv, ABC):
     """Base cupboards environment."""
+
+    _PRIVILEGED_PROPS = ("all_cabinets",)
 
     RESET_ROBOT_POS = np.array([-0.2, 0, 0])
 
@@ -30,26 +31,6 @@ class _CupboardsInteractionEnv(BiGymEnv, ABC):
             self.cabinet_door_right,
             self.cabinet_wall,
         ]
-
-    def _get_task_privileged_obs(self):
-        """Normalised joint state of every cabinet in the scene.
-
-        This is the quantity `_success` thresholds -- `ModularCabinet.get_state()` -- so a
-        state-based agent sees exactly what decides the task, and nothing about the robot it
-        does not already have from proprioception.
-        """
-        return {
-            f"cabinet_{i}_state": np.asarray(c.get_state(), np.float32)
-            for i, c in enumerate(self.all_cabinets)
-        }
-
-    def _get_task_privileged_obs_space(self):
-        return {
-            f"cabinet_{i}_state": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(len(c.get_state()),), dtype=np.float32
-            )
-            for i, c in enumerate(self.all_cabinets)
-        }
 
 
 class DrawerTopOpen(_CupboardsInteractionEnv):

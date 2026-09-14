@@ -17,6 +17,8 @@ from bigym.utils.env_utils import get_random_sites
 class _DishwasherPlatesEnv(BiGymEnv, ABC):
     """Base plates environment."""
 
+    _PRIVILEGED_PROPS = ("dishwasher", "drainer", "plates",)
+
     RESET_ROBOT_POS = np.array([0, -0.6, 0])
 
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher.yaml"
@@ -79,6 +81,8 @@ class DishwasherUnloadPlates(_DishwasherPlatesEnv):
 
 class DishwasherUnloadPlatesLong(DishwasherUnloadPlates):
     """Unload plate from dishwasher in wall cabinet task."""
+
+    _PRIVILEGED_PROPS = ("dishwasher", "drainer", "plates", "wall_cabinet",)
 
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher_wall_cabinet.yaml"
 

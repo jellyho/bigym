@@ -18,6 +18,8 @@ from bigym.utils.env_utils import get_random_sites
 class _DishwasherCutleryEnv(BiGymEnv, ABC):
     """Base cutlery environment."""
 
+    _PRIVILEGED_PROPS = ("dishwasher", "cutlery",)
+
     DEFAULT_ROBOT = H1FineManipulation
 
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher.yaml"
@@ -69,6 +71,8 @@ class _DishwasherUnloadCutleryEnv(_DishwasherCutleryEnv):
 class DishwasherUnloadCutlery(_DishwasherUnloadCutleryEnv):
     """Unload cutlery from dishwasher task."""
 
+    _PRIVILEGED_PROPS = ("dishwasher", "cutlery", "tray",)
+
     _TRAY_POS = np.array([0.65, -0.6, 0.86])
     _TRAY_BOUNDS = np.array([0.05, 0.05, 0])
     _TRAY_ROT = np.array([0, 0, -np.pi / 2])
@@ -96,6 +100,8 @@ class DishwasherUnloadCutlery(_DishwasherUnloadCutleryEnv):
 class DishwasherUnloadCutleryLong(_DishwasherUnloadCutleryEnv):
     """Unload cutlery from dishwasher to drawer task."""
 
+    _PRIVILEGED_PROPS = ("dishwasher", "cutlery", "tray", "cutlery_cabinet",)
+
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher_cutlery_cabinet.yaml"
     _CUTLERY = [Fork]
     _TOLERANCE = 0.1
@@ -121,6 +127,8 @@ class DishwasherUnloadCutleryLong(_DishwasherUnloadCutleryEnv):
 
 class DishwasherLoadCutlery(_DishwasherCutleryEnv):
     """Load cutlery to dishwasher task."""
+
+    _PRIVILEGED_PROPS = ("dishwasher", "cutlery", "mug",)
 
     _MUG_POS = np.array([0.65, -0.6, 0.86])
     _MUG_BOUNDS = np.array([0.05, 0.05, 0])

@@ -19,6 +19,8 @@ from bigym.utils.env_utils import get_random_points_on_plane
 class _ManipulationEnv(BiGymEnv, ABC):
     """Base manipulation environment."""
 
+    _PRIVILEGED_PROPS = ("cabinet",)
+
     _PRESET_PATH = PRESETS_PATH / "cabinet.yaml"
 
     def _initialize_env(self):
@@ -27,6 +29,8 @@ class _ManipulationEnv(BiGymEnv, ABC):
 
 class FlipCup(_ManipulationEnv):
     """Flip cup upside-up task."""
+
+    _PRIVILEGED_PROPS = ("cabinet", "cup",)
 
     _CUP_POS = np.array([0.8, 0, 1])
     _CUP_ROT_X = np.deg2rad(180)
@@ -72,6 +76,8 @@ class FlipCup(_ManipulationEnv):
 
 class FlipCutlery(_ManipulationEnv):
     """Flip cutlery item task."""
+
+    _PRIVILEGED_PROPS = ("cabinet", "cup", "spoon",)
 
     DEFAULT_ROBOT = H1FineManipulation
 
@@ -125,6 +131,8 @@ class FlipCutlery(_ManipulationEnv):
 
 class StackBlocks(BiGymEnv):
     """Stack blocks in the correct area of the table."""
+
+    _PRIVILEGED_PROPS = ("blocks",)
 
     _PRESET_PATH = PRESETS_PATH / "stack_blocks.yaml"
 

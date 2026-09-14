@@ -14,6 +14,8 @@ from bigym.utils.env_utils import get_random_points_on_plane
 class GroceriesStoreLower(BiGymEnv):
     """Put groceries to lower cabinets tasks."""
 
+    _PRIVILEGED_PROPS = ("cabinet_1", "cabinet_2", "props",)
+
     _PRESET_PATH = PRESETS_PATH / "counter_base_2.yaml"
 
     _PROP_TYPES = [Wine, Soap, Beer, Cereals, Ketchup, Mustard, Soda]
@@ -74,6 +76,8 @@ class GroceriesStoreLower(BiGymEnv):
 
 class GroceriesStoreUpper(GroceriesStoreLower):
     """Put groceries to upper cabinets tasks."""
+
+    _PRIVILEGED_PROPS = ("cabinet_1", "cabinet_2", "props", "cabinet_wall", "shelf",)
 
     _PRESET_PATH = PRESETS_PATH / "counter_base_wall_2x2.yaml"
 

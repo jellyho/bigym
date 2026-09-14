@@ -15,6 +15,8 @@ from bigym.utils.env_utils import get_random_sites
 class _DishwasherCupsEnv(BiGymEnv, ABC):
     """Base cups environment."""
 
+    _PRIVILEGED_PROPS = ("dishwasher", "cabinets", "cups",)
+
     RESET_ROBOT_POS = np.array([0, -0.6, 0])
 
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher.yaml"
@@ -76,6 +78,8 @@ class DishwasherUnloadCups(_DishwasherCupsEnv):
 
 class DishwasherUnloadCupsLong(DishwasherUnloadCups):
     """Unload cup from dishwasher in wall cabinet task."""
+
+    _PRIVILEGED_PROPS = ("dishwasher", "cabinets", "cups", "wall_cabinet",)
 
     _PRESET_PATH = PRESETS_PATH / "counter_dishwasher_wall_cabinet.yaml"
     _CUPS_COUNT = 1

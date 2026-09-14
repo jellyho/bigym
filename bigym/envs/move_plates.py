@@ -24,6 +24,8 @@ PLATE_OFFSET_ROT = Quaternion(axis=[1, 0, 0], degrees=-5).elements
 class _MovePlatesEnv(BiGymEnv, ABC):
     """Base plates environment."""
 
+    _PRIVILEGED_PROPS = ("rack_start", "rack_target", "plates",)
+
     _PRESET_PATH = PRESETS_PATH / "move_plates.yaml"
 
     _SUCCESSFUL_DIST = 0.05
@@ -88,32 +90,9 @@ class _MovePlatesEnv(BiGymEnv, ABC):
 class MovePlate(_MovePlatesEnv):
     """Move one plate from one rack to another."""
 
-    def _get_task_privileged_obs_space(self):
-        return {
-            "rack_pose": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
-            ),
-            # get_pose() is position (3) concatenated with quaternion (4); the declared
-            # shape said 3 while the observation has always been 7.
-            "plate_pose": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
-            ),
-        }
-
-    def _get_task_privileged_obs(self):
-        return {
-            "rack_pose": np.array(self.rack_target.get_pose(), np.float32).flatten(),
-            "plate_pose": np.array(self.plates[0].get_pose(), np.float32).flatten(),
-        }
 
 
 class MoveTwoPlates(_MovePlatesEnv):
     """Move two plates from one rack to another."""
 
     _PLATES_COUNT = 2
-
-    def _get_task_privileged_obs_space(self):
-        return {}
-
-    def _get_task_privileged_obs(self):
-        return {}

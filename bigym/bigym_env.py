@@ -31,6 +31,17 @@ MAX_DISTANCE_FROM_ORIGIN = 10
 SPARSE_REWARD_FACTOR = 1
 
 
+def _prop_state(prop) -> np.ndarray:
+    """Normalised joint state for an articulated prop, world pose for a free one.
+
+    `ModularCabinet` and `Dishwasher` expose `get_state()` -- the normalised joint positions
+    the success predicates threshold. Everything else is a free body and its `get_pose()`
+    (position then quaternion, 7 numbers) is the state that decides a collision predicate.
+    """
+    getter = getattr(prop, "get_state", None) or getattr(prop, "get_pose")
+    return np.asarray(getter(), np.float32).ravel()
+
+
 class BiGymEnv(gym.Env):
     """Core BiGym environment which loads in common robot across all tasks."""
 
@@ -304,9 +315,39 @@ class BiGymEnv(gym.Env):
             obs_dict.update(self._get_task_privileged_obs_space())
         return spaces.Dict(obs_dict)
 
+    # Attribute names on `self` naming the props that make up this task's privileged
+    # observation. Declared per task rather than implemented per task: every entry resolves
+    # through `_prop_state` below, so a new task is one line and there is no second place for
+    # the observation width to be wrong. An entry may name a single prop or a list of them.
+    #
+    # WHAT GOES IN: the state each task's own `_success` already reads every step -- cabinet and
+    # dishwasher joints, the manipulated object's pose. WHAT DOES NOT: the success predicate
+    # itself, and anything about the robot, which proprioception already carries.
+    _PRIVILEGED_PROPS: tuple[str, ...] = ()
+
+    def _privileged_values(self) -> dict[str, np.ndarray]:
+        out = {}
+        for name in self._PRIVILEGED_PROPS:
+            prop = getattr(self, name)
+            items = prop if isinstance(prop, (list, tuple)) else [prop]
+            parts = [_prop_state(p) for p in items]
+            value = (np.concatenate(parts) if parts else np.zeros(0, np.float32))
+            # A prop with no joints -- several cabinets are fixtures -- yields nothing, and an
+            # always-empty key is dead width in every observation the task ever emits.
+            if value.size:
+                out[name] = value.astype(np.float32)
+        return out
+
     def _get_task_privileged_obs_space(self) -> dict[str, Any]:
         """Get the task privileged observation space."""
-        return {}
+        return {
+            name: spaces.Box(low=-np.inf, high=np.inf, shape=value.shape, dtype=np.float32)
+            for name, value in self._privileged_values().items()
+        }
+
+    def _get_task_privileged_obs(self) -> dict[str, np.ndarray]:
+        """Get the task privileged observation."""
+        return self._privileged_values()
 
     def get_observation(self) -> dict[str, np.ndarray]:
         """Get the observation."""
