@@ -19,8 +19,66 @@ BiGym features 40 diverse tasks set in home environments, ranging from simple ta
 
 Check out the project page: [https://chernyadev.github.io/bigym/](https://chernyadev.github.io/bigym/), and follow the repository for the latest updates: [https://github.com/NeuracoreAI/bigym](https://github.com/NeuracoreAI/bigym).
 
+## What this fork changes
+
+This is a fork of [NeuracoreAI/bigym](https://github.com/NeuracoreAI/bigym). Upstream behaviour
+is preserved by default except where noted; everything here is opt-in or a bug fix.
+
+### Object state for every task
+
+`BiGymEnv` defines `_get_task_privileged_obs` and its space, and returns `{}` from the base —
+so only `MovePlate` and the `ReachTarget` family ever exposed anything, and an agent configured
+with `privileged_information=True` still saw proprioception alone on 38 of 40 tasks.
+
+A task now declares `_PRIVILEGED_PROPS`, the attribute names of the props whose state it
+exposes, and the base resolves each through `get_state()` for an articulated prop or
+`get_pose()` for a free one:
+
+```python
+class _DishwasherCupsEnv(BiGymEnv, ABC):
+    _PRIVILEGED_PROPS = ("dishwasher", "cabinets", "cups")
+```
+
+All 40 tasks are covered. What is exposed is exactly the quantity each task's own `_success`
+already reads every step — cabinet and dishwasher joint states, the manipulated object's pose.
+The success predicate itself is not exposed, only the state it is computed from.
+
+### `proprioception_mode`: `compact` (default) or `raw`
+
+`ObservationConfig.proprioception_mode` selects how much of the proprioceptive observation is
+emitted:
+
+| mode | keys | numbers |
+|---|---|---|
+| `compact` *(default)* | `proprioception` = `robot.qpos` | 30 (29 with a 3-DOF base) |
+| `raw` | qpos+qvel, plus the gripper and floating-base keys | 66 |
+
+`compact` is the default because the other 36 numbers carry nothing the first 30 do not,
+measured across all 40 tasks:
+
+- `proprioception_floating_base` (4) is **bit-identical** to qpos's pelvis entries, in 40/40;
+- `proprioception_grippers` (2) is `average(driver joint qpos)` rescaled and **rounded to one
+  decimal** — a monotone function of qpos entries already present (corr 0.9999), so a *lossier*
+  copy rather than new information;
+- `qvel` (30) is recoverable from position differences under frame stacking, at corr 0.92–0.99
+  for every arm joint and for pelvis x/y.
+
+What `compact` keeps includes the 16 gripper linkage joints, which are **not** redundant: their
+effective rank is 3 per gripper, because the fingers deflect differently when something is
+held. Use `raw` to reproduce a result published against the old observation.
+
+### Fixes
+
+- `DemoStore._create_path` ignored `privileged_information` and the proprioception mode, so a
+  replay cached under one configuration was handed back to a caller that had asked for another
+  — failing on a missing key, or silently returning a different observation. It now keys on
+  both, as it already did on the camera set.
+- `MovePlate` declared `plate_pose` with shape `(3,)` while `get_pose()` returns position and
+  quaternion, 7.
+
 ## Table of Contents
 
+1. [What this fork changes](#what-this-fork-changes)
 1. [Install](#install)
 2. [Tasks](#tasks)
 3. [Usage](#usage)
