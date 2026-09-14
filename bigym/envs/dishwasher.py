@@ -2,6 +2,7 @@
 from abc import ABC
 
 import numpy as np
+from gymnasium import spaces
 
 from bigym.bigym_env import BiGymEnv
 from bigym.const import PRESETS_PATH
@@ -18,6 +19,17 @@ class _DishwasherEnv(BiGymEnv, ABC):
 
     def _initialize_env(self):
         self.dishwasher = self._preset.get_props(Dishwasher)[0]
+
+    def _get_task_privileged_obs(self):
+        """Door, bottom tray and middle tray, normalised -- what `_success` thresholds."""
+        return {"dishwasher_state": np.asarray(self.dishwasher.get_state(), np.float32)}
+
+    def _get_task_privileged_obs_space(self):
+        return {
+            "dishwasher_state": spaces.Box(
+                low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32
+            )
+        }
 
 
 class DishwasherOpen(_DishwasherEnv):

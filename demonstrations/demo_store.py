@@ -232,6 +232,17 @@ class DemoStore:
         )
         if metadata.observation_mode == ObservationMode.Pixel:
             path /= metadata.environment_data.camera_description
+        # `privileged_information` changes the stored observations exactly as the camera set
+        # does, so it has to be part of the path. Without this a replay cached before the flag
+        # was turned on is returned for a request that needs the extra keys, and the caller
+        # fails on a missing key -- or, worse, silently reads a different observation than the
+        # one it configured. Lightweight demos are the recorded source and carry no observations
+        # at all, so their directory is left alone.
+        if (
+            metadata.observation_mode != ObservationMode.Lightweight
+            and metadata.environment_data.observation_config.privileged_information
+        ):
+            path /= "privileged"
         if frequency:
             path /= f"{frequency}hz"
         return path / metadata.filename

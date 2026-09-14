@@ -93,8 +93,10 @@ class MovePlate(_MovePlatesEnv):
             "rack_pose": spaces.Box(
                 low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
             ),
+            # get_pose() is position (3) concatenated with quaternion (4); the declared
+            # shape said 3 while the observation has always been 7.
             "plate_pose": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32
+                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
             ),
         }
 

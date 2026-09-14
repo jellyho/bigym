@@ -1,6 +1,7 @@
 """Pick and place tasks."""
 
 import numpy as np
+from gymnasium import spaces
 from pyquaternion import Quaternion
 
 from bigym.bigym_env import BiGymEnv
@@ -32,6 +33,23 @@ class PutCups(BiGymEnv):
         self.cabinet_base = self._preset.get_props(BaseCabinet)[0]
         self.cabinet_wall = self._preset.get_props(WallCabinet)[0]
         self.cups = [Mug(self._mojo) for _ in range(self._CUPS_COUNT)]
+
+    def _get_task_privileged_obs(self):
+        """Every cup's world pose. `_success` is a collision predicate against a shelf or a
+        counter, so the pose is the state that decides it; the predicate itself is not exposed.
+        """
+        return {
+            f"cup_{i}_pose": np.asarray(c.get_pose(), np.float32).flatten()
+            for i, c in enumerate(self.cups)
+        }
+
+    def _get_task_privileged_obs_space(self):
+        return {
+            f"cup_{i}_pose": spaces.Box(
+                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
+            )
+            for i in range(self._CUPS_COUNT)
+        }
 
     def _success(self) -> bool:
         for cup in self.cups:
@@ -137,6 +155,17 @@ class SaucepanToHob(BiGymEnv):
     def _initialize_env(self):
         self.cabinet_base = self._preset.get_props(BaseCabinet)[0]
         self.saucepan = Saucepan(self._mojo)
+
+    def _get_task_privileged_obs(self):
+        """The saucepan's world pose -- `_success` tests it against the hob."""
+        return {"saucepan_pose": np.asarray(self.saucepan.get_pose(), np.float32).flatten()}
+
+    def _get_task_privileged_obs_space(self):
+        return {
+            "saucepan_pose": spaces.Box(
+                low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
+            )
+        }
 
     def _success(self) -> bool:
         if not self.saucepan.is_colliding(self.cabinet_base.hob):
