@@ -405,9 +405,6 @@ class BiGymEnv(gym.Env):
                 obs_renderer.disable_depth_rendering()
         return obs
 
-    def _get_task_privileged_obs(self) -> dict[str, Any]:
-        """Get the task privileged observation."""
-        return {}
 
     def _update_seed(self, override_seed=None):
         """Update the seed for the environment.
