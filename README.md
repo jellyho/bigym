@@ -67,6 +67,78 @@ What `compact` keeps includes the 16 gripper linkage joints, which are **not** r
 effective rank is 3 per gripper, because the fingers deflect differently when something is
 held. Use `raw` to reproduce a result published against the old observation.
 
+### 20 Hz is the default control frequency
+
+Upstream defaults `control_frequency` to `CONTROL_FREQUENCY_MAX` — the raw 500 Hz the
+demonstrations were recorded at — and leaves the rate to each caller. CQN-AS, for instance,
+decimates per task at 10/20/25 while its paper reports uniform hyperparameters. A benchmark
+whose control rate is a caller's private choice cannot be compared across papers, so this fork
+picks one and states it: **20 Hz, uniform across all 40 tasks** (`CONTROL_FREQUENCY_DEFAULT`).
+
+20 rather than 25 or 50 because a decimation sweep found no consistent cost — the best rate per
+task was scattered over 500/50/25/20 within ±0.06, about the standard error at 30–69
+demonstrations — so the tie was broken by what the rate buys: an action chunk of a round number
+of seconds, and the longest horizon the recordings support.
+
+One consequence worth knowing: `_sub_steps_count` is also the action scale, and
+`action_modes.py` widens the floating-base bounds by it even in absolute mode, so the pelvis
+range at 20 Hz is 2.5× what it is at 50. A number measured at one rate does not carry to
+another.
+
+Pass `control_frequency=500` to get upstream's behaviour back.
+
+### Datasets built with this fork
+
+All 40 tasks, replayed once at 20 Hz with the compact observation and the object state, and
+published in two formats. One replay produced both, so the state rows and the video frames are
+the same episodes — two replays of the same actions have been measured disagreeing about which
+episodes succeed, which is why that matters.
+
+| dataset | what it is |
+|---|---|
+| [`jellyho/bigym-ogbench-20hz`](https://huggingface.co/datasets/jellyho/bigym-ogbench-20hz) | 40 `.npz` in OGBench's layout, for offline RL |
+| `jellyho/bigym-<Task>-20hz` | 40 LeRobot v3.0 datasets, 256×256 video from three cameras |
+| [`jellyho/bigym-replay-outcomes`](https://huggingface.co/datasets/jellyho/bigym-replay-outcomes) | 1,868 replay clips labelled success/failure |
+
+**The OGBench layout.** One row per *state*, so a trajectory of T transitions is T+1 rows;
+`terminals` marks each trajectory's last row and that row's action is a pad. Keys:
+`observations`, `actions`, `terminals`, `rewards`, `episode_success`, `action_low`,
+`action_high`.
+
+**The observation** is `robot.qpos` (30 numbers, 29 with a 3-DOF base) followed by the task's
+object state, in `sorted(_PRIVILEGED_PROPS)` order. The per-task widths and key order are in
+the `.json` beside each file.
+
+**The actions** are rescaled to [-1, 1] with the demonstrations' own per-dimension range, and
+that range travels **inside the npz** as `action_low` / `action_high`. Invert before stepping
+the environment, whose action space is raw joint limits and which *raises* rather than clips on
+an out-of-bounds action:
+
+```python
+raw = (a + 1) / 2 * (high - low + 1e-8) + low
+```
+
+The bounds are in the file rather than recomputed because recomputing them is how they came
+apart once: the caches were rebuilt, a replay put success at a different step, and the training
+data and the evaluation environment ended up on two different scalings with nothing to report it.
+
+**Roughly a quarter of the demonstrations do not reach their goal on replay**, and the rate is
+per task (0.035 to 1.000; `replay_success_rate` in each sidecar). That is a property of the
+build, not of the operator: `bigym 4.0.0`, which the demos were recorded with, was never
+published, and its successor's changelog says the floating-base actuator stiffness was adjusted.
+The failures are labelled rather than dropped — `episode_success` — because a critic needs the
+contrast, and an imitation baseline can filter them out.
+
+**Getting one**, with nothing installed but the standard library:
+
+```python
+import urllib.request, numpy as np
+url = ('https://huggingface.co/datasets/jellyho/bigym-ogbench-20hz/'
+       'resolve/main/DrawersAllOpen_20hz_state-priv.npz')
+urllib.request.urlretrieve(url, 'DrawersAllOpen.npz')
+z = np.load('DrawersAllOpen.npz')
+```
+
 ### Fixes
 
 - `DemoStore._create_path` ignored `privileged_information` and the proprioception mode, so a
@@ -79,6 +151,7 @@ held. Use `raw` to reproduce a result published against the old observation.
 ## Table of Contents
 
 1. [What this fork changes](#what-this-fork-changes)
+1. [Datasets built with this fork](#datasets-built-with-this-fork)
 1. [Install](#install)
 2. [Tasks](#tasks)
 3. [Usage](#usage)
