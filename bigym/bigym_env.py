@@ -28,6 +28,24 @@ from bigym.utils.observation_config import (
 CONTROL_FREQUENCY_MAX = 500
 CONTROL_FREQUENCY_MIN = 20
 
+# THIS FORK'S DEFAULT, and the one difference from upstream that changes what a default
+# environment does. Upstream defaults to CONTROL_FREQUENCY_MAX, i.e. the raw 500 Hz the
+# demonstrations were recorded at, and leaves every caller to pick a rate: CQN-AS, for
+# instance, decimates per task at 10/20/25 while its paper claims uniform hyperparameters.
+# A benchmark whose control rate is a caller's private choice cannot be compared across
+# papers, so this fork picks one and states it: 20 Hz, uniform across all forty tasks.
+#
+# 20 rather than 25 or 50 because a decimation sweep found no consistent cost -- the best
+# rate per task was scattered over 500/50/25/20 within +-0.06, which is about the standard
+# error at 30-69 demonstrations -- so the tie is broken by what the rate buys: an action
+# chunk of a round number of seconds, and the longest horizon the recordings support.
+#
+# NOTE that `_sub_steps_count` is also the action scale, and `action_modes.py` widens the
+# floating-base bounds by it even in absolute mode, so the pelvis range at 20 Hz is 2.5x
+# what it is at 50 Hz. That is a property of the rate, not a bug introduced here, but it is
+# the reason a number measured at one rate does not carry to another.
+CONTROL_FREQUENCY_DEFAULT = 20
+
 PHYSICS_DT = 0.002
 
 MAX_DISTANCE_FROM_ORIGIN = 10
@@ -70,7 +88,7 @@ class BiGymEnv(gym.Env):
         observation_config: ObservationConfig = ObservationConfig(),
         render_mode: Optional[str] = None,
         start_seed: Optional[int] = None,
-        control_frequency: int = CONTROL_FREQUENCY_MAX,
+        control_frequency: int = CONTROL_FREQUENCY_DEFAULT,
         robot_cls: Optional[Type[Robot]] = None,
     ):
         """Init.
@@ -84,7 +102,8 @@ class BiGymEnv(gym.Env):
             will be used.
         :param start_seed: The seed to start the environment with. If None, a random
             seed will be used.
-        :param control_frequency: Control loop frequency, 500 Hz by default.
+        :param control_frequency: Control loop frequency, 20 Hz by default in this
+            fork (upstream defaults to the raw 500 Hz recording rate).
         :param robot_cls: Environment robot class override.
         """
         # Tracks physics simulation stability
